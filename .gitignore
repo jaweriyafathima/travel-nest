@@ -46,3 +46,6 @@ app.*.map.json
 
 # Backup ZIP files
 *.zip
+
+# Firebase local cache
+.firebase/
