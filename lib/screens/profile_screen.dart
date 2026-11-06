@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../services/app_theme.dart';
 import 'personalized_trip_dashboard_screen.dart';
+import 'login_screen.dart';
 
 // ============================================================
 // PROFILE SCREEN
@@ -20,10 +21,9 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   static const Color purple = Color(0xFF7B2CBF);
 
-  final User? user = FirebaseAuth.instance.currentUser;
+  User? get user => FirebaseAuth.instance.currentUser;
 
-  bool get isDark =>
-      AppTheme.themeMode.value == ThemeMode.dark;
+  bool get isDark => AppTheme.themeMode.value == ThemeMode.dark;
 
   Color get cardColor =>
       isDark ? const Color(0xFF292331) : Colors.white;
@@ -38,13 +38,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) setState(() {});
   }
 
+  // ============================================================
+  // LOGOUT FUNCTION
+  // ============================================================
+
+  Future<void> _logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Logout',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            'Are you sure you want to logout from Travel Nest?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: purple,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout != true || !mounted) return;
+
+    try {
+      await FirebaseAuth.instance.signOut();
+
+      if (!mounted) return;
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+        ),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Logout failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final name = user?.displayName?.trim().isNotEmpty == true
-        ? user!.displayName!
+    final currentUser = user;
+
+    final name = currentUser?.displayName?.trim().isNotEmpty == true
+        ? currentUser!.displayName!
         : 'Traveler';
 
-    final email = user?.email ?? 'No email available';
+    final email = currentUser?.email ?? 'No email available';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -207,6 +272,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               );
             },
+          ),
+
+          const SizedBox(height: 15),
+
+          // LOGOUT BUTTON
+          _menuCard(
+            icon: Icons.logout_rounded,
+            title: 'Logout',
+            subtitle: 'Sign out from your Travel Nest account',
+            onTap: _logout,
           ),
 
           const SizedBox(height: 25),
